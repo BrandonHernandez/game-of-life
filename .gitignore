@@ -1,0 +1,18 @@
+# Ignore the target directory
+target/
+
+# Ignore backup files
+*.rs.bk
+
+# Ignore IDE/text editor specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Ignore Cargo lock for libraries (optional)
+Cargo.lock
+
+# Ignore OS-generated files
+.DS_Store
+Thumbs.db
