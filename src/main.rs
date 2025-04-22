@@ -26,54 +26,6 @@
 /// [ ] Command Line Argument Parser, to get map dimensions.
 /// [x] Filesystem functions, to Load and Save maps.
 
-struct Game {
-    max_generations: u32,
-    refresh_rate: u32,
-    map_size: (u32, u32),
-}
-
-enum MainMenuOpt {
-    CreateKillCell,
-    SetGenerations,
-    SetRefreshRate,
-    Play,
-    SaveMap,
-    LoadMap,
-    NewMap,
-    Exit,
-    // Credits,
-    Unknown,
-}
-
-fn main_menu() -> MainMenuOpt {
-    let menu_text: String = format!(
-        "{} | {} | {} | {} | {} | {} | {} | {}\n", 
-        "1. Create/kill cell", 
-        "2. Set generations", 
-        "3. Set refresh rate", 
-        "4. Play", 
-        "5. Save map", 
-        "6. Load map", 
-        "7. New map", 
-        "99. Exit",
-    );
-    print_message(&menu_text, true);
-    
-    let opt = get_i32(&String::from("Option: "));
-    
-    match opt {
-        1 => MainMenuOpt::CreateKillCell,
-        2 => MainMenuOpt::SetGenerations,
-        3 => MainMenuOpt::SetRefreshRate,
-        4 => MainMenuOpt::Play,
-        5 => MainMenuOpt::SaveMap,
-        6 => MainMenuOpt::LoadMap,
-        7 => MainMenuOpt::NewMap,
-        99 => MainMenuOpt::Exit,
-        _ => MainMenuOpt::Unknown, 
-    }
-}
-
 type Vectrix = Vec<Vec<bool>>;
 fn main() {
     clear_console();
@@ -89,8 +41,15 @@ fn main() {
     let mut max_generations: u32 = 0;
     let mut refresh_rate: u32 = 100;
     
-    // Menu loop
+    // Game config struct
+    let mut game_properties = GameConfig {
+        tick_rate: 250,
+        infinite_game: false,
+        max_generations: 50,
+        map_size: (10, 10),
+    };
 
+    // Menu loop
     loop {
         clear_console();
         print_header();
@@ -101,17 +60,119 @@ fn main() {
 
         match menu_opt {
             MainMenuOpt::CreateKillCell => message = create_kill_cell(&mut map),
-            MainMenuOpt::SetGenerations => (max_generations, message) = set_generations(),
-            MainMenuOpt::SetRefreshRate => (refresh_rate, message) = set_refresh_rate(),
-            MainMenuOpt::Play => message = play(&mut map, max_generations, refresh_rate),
+            MainMenuOpt::Play => {
+                message = play(&mut map, game_properties.max_generations, game_properties.tick_rate);
+            },
             MainMenuOpt::SaveMap => message = save_map("map.txt", &map),
             MainMenuOpt::LoadMap => (map, message) = load_map("map.txt"),
-            MainMenuOpt::NewMap => (map, message) = new_map(),
+            MainMenuOpt::Configuration => {
+                message = String::from("Game Configuration");
+                loop {
+                    clear_console();
+                    print_header();
+                    print_map(&map, true, true);
+                    print_message(&message, true);
+
+                    let menu_opt = config_menu();
+
+                    match menu_opt {
+                        ConfigMenuOpt::SetTickRate => {
+                            (game_properties.tick_rate, message) = set_refresh_rate();
+                        },
+                        ConfigMenuOpt::InfiniteGame => {
+                            // TBD
+                            // (game_properties.infinite_game, message) = set_infinite_game();
+                            ()
+                        },
+                        ConfigMenuOpt::SetMaxGenerations => {
+                            (game_properties.max_generations, message) = set_generations();
+                        },
+                        ConfigMenuOpt::SetMapSize => (map, message) = new_map(),
+                        ConfigMenuOpt::Exit => break,
+                        ConfigMenuOpt::Unknown => (),
+                    }
+                }
+            },
             MainMenuOpt::Exit => break,
             MainMenuOpt::Unknown => (),
         }
     }
 
+}
+
+enum MainMenuOpt {
+    CreateKillCell,
+    Play,
+    SaveMap,
+    LoadMap,
+    Configuration,
+    Exit,
+    // Credits,
+    Unknown,
+}
+
+fn main_menu() -> MainMenuOpt {
+    let menu_text: String = format!(
+        "{} | {} | {} | {} | {} | {}\n", 
+        "1. Create/kill cell",
+        "2. Play", 
+        "3. Save map", 
+        "4. Load map", 
+        "5. Configuration", 
+        "99. Exit",
+    );
+    print_message(&menu_text, true);
+    
+    let opt = get_u32(&String::from("Option: "));
+    
+    match opt {
+        1 => MainMenuOpt::CreateKillCell,
+        2 => MainMenuOpt::Play,
+        3 => MainMenuOpt::SaveMap,
+        4 => MainMenuOpt::LoadMap,
+        5 => MainMenuOpt::Configuration,
+        99 => MainMenuOpt::Exit,
+        _ => MainMenuOpt::Unknown, 
+    }
+}
+
+struct GameConfig {
+    tick_rate: u32,
+    infinite_game: bool,
+    max_generations: u32,
+    map_size: (u32, u32),
+}
+
+enum ConfigMenuOpt {
+    SetTickRate,
+    InfiniteGame,
+    SetMaxGenerations,
+    SetMapSize,
+    Exit,
+    Unknown,
+}
+
+fn config_menu() -> ConfigMenuOpt {
+    let config_text: String = format!(
+        "{} | {} | {} | {} | {}",
+        "1. Set Tick Rate",
+        "2. Infinite game",
+        "3. Set Max Generations",
+        "4. Set Map Size",
+        "99. Exit",
+    );
+    print_message(&config_text, true);
+
+    let opt = get_u32(&String::from("Option: "));
+
+    match opt {
+        1 => ConfigMenuOpt::SetTickRate,
+        2 => ConfigMenuOpt::InfiniteGame,
+        3 => ConfigMenuOpt::SetMaxGenerations,
+        4 => ConfigMenuOpt::SetMapSize,
+        99 => ConfigMenuOpt::Exit,
+        _ => ConfigMenuOpt::Unknown,
+    }
 }
 
 fn get_usize(prompt: &String) -> usize {
