@@ -11,7 +11,7 @@ target/
 *.swo
 
 # Ignore Cargo lock for libraries (optional)
-Cargo.lock
+# Cargo.lock
 
 # Ignore OS-generated files
 .DS_Store

@@ -36,10 +36,6 @@ fn main() {
     // Create a map
     let mut map: Vectrix;
     (map, message) = new_map();
-
-    // Create game properties struct
-    let mut max_generations: u32 = 0;
-    let mut refresh_rate: u32 = 100;
     
     // Game config struct
     let mut game_properties = GameConfig {
@@ -61,7 +57,7 @@ fn main() {
         match menu_opt {
             MainMenuOpt::CreateKillCell => message = create_kill_cell(&mut map),
             MainMenuOpt::Play => {
-                message = play(&mut map, game_properties.max_generations, game_properties.tick_rate);
+                message = play(&mut map, &game_properties);
             },
             MainMenuOpt::SaveMap => message = save_map("map.txt", &map),
             MainMenuOpt::LoadMap => (map, message) = load_map("map.txt"),
@@ -77,12 +73,10 @@ fn main() {
 
                     match menu_opt {
                         ConfigMenuOpt::SetTickRate => {
-                            (game_properties.tick_rate, message) = set_refresh_rate();
+                            (game_properties.tick_rate, message) = set_tick_rate();
                         },
                         ConfigMenuOpt::InfiniteGame => {
-                            // TBD
-                            // (game_properties.infinite_game, message) = set_infinite_game();
-                            ()
+                            (game_properties.infinite_game, message) = set_infinite_game(&game_properties.infinite_game);
                         },
                         ConfigMenuOpt::SetMaxGenerations => {
                             (game_properties.max_generations, message) = set_generations();
@@ -190,25 +184,6 @@ fn get_usize(prompt: &String) -> usize {
         }
     }
     // usize value is guaranteed at this point
-    result.unwrap()
-}
-
-fn get_i32(prompt: &String) -> i32 {
-    use std::num::ParseIntError;
-
-    let mut result: Result<i32, ParseIntError>;
-
-    loop {
-        result = get_input(&prompt).trim().parse::<i32>();
-        match result {
-            Ok(_value) => break,
-            Err(_error) => {
-                // clear_console();
-                print_message(&String::from("[-] Bad input. Try again."), true);
-            },
-        }
-    }
-    // i32 value is guaranteed at this point
     result.unwrap()
 }
 
@@ -341,11 +316,16 @@ fn print_map(map: &Vectrix, brackets: bool, headers: bool) {
 }
 
 fn create_kill_cell(map: &mut Vectrix) -> String {
-    
+    clear_console();
+    print_header();
+    print_map(&map, true, true);
+    let mut message = String::from("Where?");
+
+    print_message(&message, true);
+
     let row: usize = get_usize(&String::from("Row: "));
     let col: usize = get_usize(&String::from("Col: "));
     
-    clear_console();
 
     let row_len = map.len();
     let col_len = map[0].len();
@@ -357,12 +337,14 @@ fn create_kill_cell(map: &mut Vectrix) -> String {
 
     match map[filtered_row][filtered_col] {
         true => { 
-            return format!("[■ ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
+            message = format!("[■ ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
         },
         false => { 
-            return format!("[  ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
+            message = format!("[  ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
         },
-    }
+    };
+    
+    return message;
 }
 
 fn set_generations() -> (u32, String) {
@@ -376,15 +358,15 @@ fn set_generations() -> (u32, String) {
     );
 }
 
-fn set_refresh_rate() -> (u32, String) {
-    let rate: u32 = get_u32(&String::from("Refresh rate: ")); 
+fn set_tick_rate() -> (u32, String) {
+    let rate: u32 = get_u32(&String::from("Tick rate (ms): ")); 
     return (
         rate, 
-        format!("Refresh rate = {rate}")
+        format!("Tick rate = {rate} ms")
     );
 }
 
-fn play(map: &mut Vectrix, max_generations: u32, refresh_rate: u32) -> String {
+fn play(map: &mut Vectrix, game_properties: &GameConfig) -> String {
     let mut generations: u32 = 0;
     let i_size: usize = map.len();
     let j_size: usize = map[0].len();
@@ -395,14 +377,24 @@ fn play(map: &mut Vectrix, max_generations: u32, refresh_rate: u32) -> String {
         refresh_console();
         print_header();
         print_map(map, false, false);
-        let message = format!("Generation {generations} of {max_generations}");
+        let message = match game_properties.infinite_game {
+            true => format!("Generation {}", generations),
+            false => format!("Generation {} of {}", generations, game_properties.max_generations),
+        };
+        
         print_message(&message, true);
-        delay(refresh_rate);
+        delay(game_properties.tick_rate);
 
         // Just needed that extra print of the last generation.
         // Break the loop now.
-        if generations == max_generations {
-            break;
+        if generations == game_properties.max_generations && !game_properties.infinite_game {
+            // Return message
+            return String::from("Game finished.");
+        }
+
+        // Return if ESC is pressed
+        if esc_key_pressed() {
+            return String::from("Game aborted.");
         }
         
         let mut next_map: Vectrix = vec![vec![false; j_size]; i_size];
@@ -416,8 +408,7 @@ fn play(map: &mut Vectrix, max_generations: u32, refresh_rate: u32) -> String {
         *map = next_map;
         generations += 1;
     }
-    // Return message
-    String::from("Game finished.")
+    
 }
 
 fn calculate_next_gen(map: &Vectrix, next_map: &mut Vectrix, neighbors: u32, i: &usize, j: &usize) {
@@ -673,3 +664,37 @@ fn save_map(filename: &str, map: &Vectrix, ) -> String {
         Err(_) => return format!("[-] Failed to save map."),
     };
 }
+
+fn esc_key_pressed() -> bool {
+    use crossterm::event::{self, Event, KeyCode};
+
+    // poll(0) means it returns immediately with event availability information
+    // using while instead of if to clear the pending events are processed (if many keys are pressed between ticks).
+    while event::poll(std::time::Duration::from_millis(0)).unwrap() {
+        match event::read().unwrap() {
+            Event::Key(key_event) => {
+                if key_event.code == KeyCode::Esc {
+                    return true;
+                }
+            },
+            _ => (),
+        };
+    }
+    false
+}
+
+fn set_infinite_game(prev_state: &bool) -> (bool, String) {
+    
+    let new_state: bool = !prev_state;
+
+    let message: String = match new_state {
+        true => format!("Infinite game Enabled"),
+        false => format!("Infinite game Disabled"),
+    };
+    
+    return (new_state, message)
+}
+
+// fn print_rules() {
+
+// }
