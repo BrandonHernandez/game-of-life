@@ -64,7 +64,6 @@ fn main() {
             MainMenuOpt::Configuration => {
                 message = String::from("Game Configuration");
                 loop {
-                    clear_console();
                     print_header();
                     print_map(&map, true, true);
                     print_message(&message, true);
@@ -169,6 +168,23 @@ fn config_menu() -> ConfigMenuOpt {
     }
 }
 
+enum Cell {
+    Alive,
+    Dead,
+}
+
+impl Cell {
+    fn new() -> Cell {
+        Cell::Alive
+    }
+    fn toggle(self) -> Cell {
+        match self {
+            Cell::Alive => Cell::Dead,
+            Cell::Dead => Cell::Alive,
+        }
+    }
+}
+
 fn get_usize(prompt: &String) -> usize {
     use std::num::ParseIntError;
 
@@ -197,7 +213,6 @@ fn get_u32(prompt: &String) -> u32 {
         match result {
             Ok(_value) => break,
             Err(_error) => {
-                // clear_console();
                 print_message(&String::from("[-] Bad input. Try again."), true);
             },
         }
@@ -260,7 +275,6 @@ fn print_header() {
 fn clear_console() {
     // ANSI escape code to clear screen and move cursor to top-left
     print!("\x1B[2J\x1B[1;1H");
-    // io::stdout().flush().unwrap(); // make sure it actually prints now (?)
 }
 
 fn refresh_console() {
@@ -332,7 +346,7 @@ fn create_kill_cell(map: &mut Vectrix) -> String {
 
     let filtered_row = row % row_len;
     let filtered_col = col % col_len;
-
+    
     map[filtered_row][filtered_col] = !map[filtered_row][filtered_col];
 
     match map[filtered_row][filtered_col] {
