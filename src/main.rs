@@ -26,7 +26,7 @@
 /// [ ] Command Line Argument Parser, to get map dimensions.
 /// [x] Filesystem functions, to Load and Save maps.
 
-type Vectrix = Vec<Vec<bool>>;
+type Vectrix = Vec<Vec<Cell>>;
 fn main() {
     clear_console();
     let mut message: String;
@@ -64,6 +64,7 @@ fn main() {
             MainMenuOpt::Configuration => {
                 message = String::from("Game Configuration");
                 loop {
+                    clear_console();
                     print_header();
                     print_map(&map, true, true);
                     print_message(&message, true);
@@ -147,7 +148,7 @@ enum ConfigMenuOpt {
 
 fn config_menu() -> ConfigMenuOpt {
     let config_text: String = format!(
-        "{} | {} | {} | {} | {}",
+        "{} | {} | {} | {} | {}\n",
         "1. Set Tick Rate",
         "2. Infinite game",
         "3. Set Max Generations",
@@ -168,19 +169,23 @@ fn config_menu() -> ConfigMenuOpt {
     }
 }
 
+#[derive(Clone)]
 enum Cell {
-    Alive,
-    Dead,
+    Alive(String),
+    Dead(String),
 }
 
 impl Cell {
-    fn new() -> Cell {
-        Cell::Alive
+    fn alive() -> Cell {
+        Cell::Alive(String::from("■"))
     }
-    fn toggle(self) -> Cell {
+    fn dead() -> Cell {
+        Cell::Dead(String::from(" "))
+    }
+    fn not(&self) -> Cell {
         match self {
-            Cell::Alive => Cell::Dead,
-            Cell::Dead => Cell::Alive,
+            Cell::Alive(_) => Cell::dead(),
+            Cell::Dead(_) => Cell::alive(),
         }
     }
 }
@@ -242,13 +247,13 @@ fn new_map() -> (Vectrix, String) {
 
     if rows == 0 || cols == 0 {
         return (
-            vec![vec![false; 10]; 10], 
+            vec![vec![Cell::dead(); 10]; 10], 
             String::from(format!("[-] Invalid dimensions. 10 x 10 map created."))
         );
     }
 
     (
-        vec![vec![false; cols]; rows], 
+        vec![vec![Cell::dead(); cols]; rows], 
         String::from(format!("[+] {rows} x {cols} map created."))
     )
 }
@@ -283,14 +288,6 @@ fn refresh_console() {
 }
 
 fn print_map(map: &Vectrix, brackets: bool, headers: bool) {
-    let cell: String = match brackets {
-        true => format!("[{} ]", "■"),
-        false => format!(" {}  ", "■"),
-    };
-    let no_cell: String = match brackets {
-        true => String::from("[  ]"),
-        false => String::from("    "),
-    };
     let rows: usize = map.len();
     let cols: usize = map[0].len();
 
@@ -320,10 +317,16 @@ fn print_map(map: &Vectrix, brackets: bool, headers: bool) {
         print!("{header}");
 
         for j in 0..cols {
-            print!("{}", match map[i][j] {
-                true => &cell,
-                false => &no_cell,
-            });
+            let ch = match &map[i][j] {
+                Cell::Alive(ch) => ch,
+                Cell::Dead(ch) => ch,
+            };
+            if brackets {
+                print!("[{ch} ]");
+            }
+            if !brackets {
+                print!(" {ch}  ");
+            }
         }
         println!();
     }
@@ -346,15 +349,15 @@ fn create_kill_cell(map: &mut Vectrix) -> String {
 
     let filtered_row = row % row_len;
     let filtered_col = col % col_len;
-    
-    map[filtered_row][filtered_col] = !map[filtered_row][filtered_col];
 
-    match map[filtered_row][filtered_col] {
-        true => { 
-            message = format!("[■ ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
+    map[filtered_row][filtered_col] = map[filtered_row][filtered_col].not();
+
+    match &map[filtered_row][filtered_col] {
+        Cell::Alive(ch) => { 
+            message = format!("[{ch} ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
         },
-        false => { 
-            message = format!("[  ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
+        Cell::Dead(ch) => { 
+            message = format!("[{ch} ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
         },
     };
     
@@ -411,7 +414,7 @@ fn play(map: &mut Vectrix, game_properties: &GameConfig) -> String {
             return String::from("Game aborted.");
         }
         
-        let mut next_map: Vectrix = vec![vec![false; j_size]; i_size];
+        let mut next_map: Vectrix = vec![vec![Cell::dead(); j_size]; i_size];
         
         for i in 0..i_size {
             for j in 0..j_size {
@@ -426,22 +429,27 @@ fn play(map: &mut Vectrix, game_properties: &GameConfig) -> String {
 }
 
 fn calculate_next_gen(map: &Vectrix, next_map: &mut Vectrix, neighbors: u32, i: &usize, j: &usize) {
-    
-    // 1. Any live cell with fewer than 2 live neighbors dies, as if by underpopulation.
-    if map[*i][*j] && neighbors < 2 {
-        next_map[*i][*j] = false;
-    }
-    // 2. Any live cell with 2 or 3 live neighbors lives on to the next generation.
-    if map[*i][*j] && (neighbors == 2 || neighbors == 3) {
-        next_map[*i][*j] = true;
-    }
-    // 3. Any live cell with more than 3 live neighbors dies, as if by overpopulation.
-    if map[*i][*j] && neighbors > 3 {
-        next_map[*i][*j] = false;
-    }
-    // 4. Any dead cell with exactly 3 live neighbors becomes a live cell, as if by reproduction.
-    if !map[*i][*j] && neighbors == 3 {
-        next_map[*i][*j] = true;
+    match &map[*i][*j] {
+        Cell::Alive(_) => {
+            // 1. Any live cell with fewer than 2 live neighbors dies, as if by underpopulation.
+            if neighbors < 2 {
+                next_map[*i][*j] = Cell::dead();
+            }
+            // 2. Any live cell with 2 or 3 live neighbors lives on to the next generation.
+            if neighbors == 2 || neighbors == 3 {
+                next_map[*i][*j] = Cell::alive();
+            }
+            // 3. Any live cell with more than 3 live neighbors dies, as if by overpopulation.
+            if neighbors > 3 {
+                next_map[*i][*j] = Cell::dead();
+            }
+        },
+        Cell::Dead(_) => {
+            // 4. Any dead cell with exactly 3 live neighbors becomes a live cell, as if by reproduction.
+            if neighbors == 3 {
+                next_map[*i][*j] = Cell::alive();
+            }
+        },
     }
 
 }
@@ -488,8 +496,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     // [i-1,_j_] : N
@@ -501,8 +509,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     // [i-1,j+1] : NE
@@ -517,8 +525,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     // [_i_,j-1] : W
@@ -530,8 +538,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     // [_i_,j+1] : E
@@ -543,8 +551,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     // [i+1,j-1] : SW
@@ -559,8 +567,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     // [i+1,_j_] : S
@@ -572,8 +580,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     // [i+1,j+1] : SE
@@ -588,8 +596,8 @@ fn calculate_neighbors(map: &Vectrix, i: &usize, j: &usize) -> u32 {
     i_chk_ptr = i_chk as usize;
     j_chk_ptr = j_chk as usize;
     neighbors = match map[i_chk_ptr][j_chk_ptr] {
-        true => neighbors + 1,
-        false => neighbors,
+        Cell::Alive(_) => neighbors + 1,
+        Cell::Dead(_) => neighbors,
     };
 
     neighbors
@@ -605,7 +613,7 @@ fn load_map(filename: &str) -> (Vectrix, String) {
     // Return default map of 2x2 if failed to read file.
     let content = match read_to_string(filename) {
         Ok(content) => content,
-        Err(_) => return (vec![vec![false; 2]; 2], format!("[-] Failed to load map.")),
+        Err(_) => return (vec![vec![Cell::dead(); 2]; 2], format!("[-] Failed to load map.")),
     };
     
     let content = content.chars();
@@ -624,13 +632,13 @@ fn load_map(filename: &str) -> (Vectrix, String) {
         
         // If unit is an alive cell, push True
         if unit.eq("[x]") {
-            map[i].push(true);
+            map[i].push(Cell::alive());
             unit.clear();
         };
 
         // If unit is a dead cell, push False
         if unit.eq("[ ]") {
-            map[i].push(false);
+            map[i].push(Cell::dead());
             unit.clear();
         };
 
@@ -661,8 +669,8 @@ fn save_map(filename: &str, map: &Vectrix, ) -> String {
     while let Some(row) = iter.next() {
         for cell in row {
             let str_to_push = match cell {
-                true => "[x]",
-                false => "[ ]",
+                Cell::Alive(_) => "[x]",
+                Cell::Dead(_) => "[ ]",
             };
             content.push_str(str_to_push);                
         }
