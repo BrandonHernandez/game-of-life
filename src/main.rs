@@ -49,7 +49,7 @@ fn main() {
     // Menu loop
     loop {
         clear_console();
-        print_header();
+        print_header(vec!["Game of Life"]);
         print_map(&map, true, true);
         print_message(&message, true);
 
@@ -73,7 +73,7 @@ fn main() {
                 // Menu loop
                 loop {
                     clear_console();
-                    print_header();
+                    print_header(vec!["Game of Life"]);
                     print_map(&map, true, true);
                     print_message(&message, true);
 
@@ -284,12 +284,17 @@ fn print_message(message: &String, new_line: bool) {
     }
 }
 
-fn print_header() {
-    println!("
-    =========================================================
-    Conway's Game of Life
-    =========================================================
-    ");
+fn print_header(header_contents: Vec<&str>) {
+    let mut decor = String::new();
+    for _ in 0..70 {
+        decor.push('=');
+    }
+    println!("{decor}");
+    for piece in header_contents {
+        print!("{} ", piece);
+    }
+    print!("\n");
+    println!("{decor}");
 }
 
 fn clear_console() {
@@ -348,14 +353,14 @@ fn print_map(map: &Vectrix, brackets: bool, headers: bool) {
 }
 
 fn create_kill_cell(map: &mut Vectrix) -> String {
-    let mut message = String::from("Set/Reset Cells: ");
-    let message_loc = String::from("Location: ");
+    let mut message = String::from("Set/Reset Cells");
+    let message_loc = String::from("Enter Row and Column");
     // Default is "not edited"
     let mut edited: bool = false;
 
     loop {
         clear_console();
-        print_header();
+        print_header(vec!["Game of Life"]);
         print_map(&map, true, true);
         print_message(&message, true);
         print_message(&message_loc, true);
@@ -389,19 +394,15 @@ fn create_kill_cell(map: &mut Vectrix) -> String {
 
         // If we get here, then the map was edited
         edited =  true;
-        
     }
-    match edited {
-        true => {
-            message = String::from("Map edited successfully.");
-            return message;
-        },
-        false => {
-            message = String::from("Aborted");
-            return message;
-        },
+
+    if edited {
+        message = String::from("Map edited successfully.");
+    } else {
+        message = String::from("Aborted");
     }
-    
+
+    return message;
 }
 
 fn set_generations() -> (u32, String) {
@@ -432,7 +433,7 @@ fn play(map: &mut Vectrix, game_properties: &GameConfig) -> String {
 
     loop {
         refresh_console();
-        print_header();
+        print_header(vec!["Game of Life"]);
         print_map(map, false, false);
         let message = match game_properties.infinite_game {
             true => format!("Generation {}", generations),
