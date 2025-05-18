@@ -1,32 +1,33 @@
-/// Conway's Game of Life
-/// Rust Version
-/// Brandon Hernandez
-/// 4/17/2025
-///
-/// This app was originally written in Java.
-/// I've been learning Rust as quick as I can, and it is the time now
-/// to build something. This is a good exercise.
-/// Wish me luck!
-/// 
+// Conway's Game of Life
+// Rust Version
+// Brandon Hernandez
+// 4/17/2025
+//
+// This app was originally written in Java.
+// I've been learning Rust as quick as I can, and it is the time now
+// to build something. This is a good exercise.
+// Wish me luck!
+// 
 
-/// Functions to define:
-/// [x] CellBirthOrDeath(Scanner scanner, boolean[][] map) --> String {}
-/// [x] Play(boolean[][] map, int maxGens, int refreshRate) --> boolean[][] {}
-/// [x] ClearCLI() {}
-/// [x] Wait(int millis) {}
-/// [x] PrintHeader() {}
-/// [x] PrintMap(boolean[][] map, boolean brackets, boolean headers) {}
-/// [x] PrintMessage(String message) {}
-/// [ ] Bye() {}
-/// [x] SaveMap(String filename, boolean[][] map) {}
-/// [x] LoadMap(String filename) --> boolean[][] {}
-/// [ ] Dir() - I need this method to print the contents of the folder to know what maps can be loaded.
+// Functions to define:
+// [x] CellBirthOrDeath(Scanner scanner, boolean[][] map) --> String {}
+// [x] Play(boolean[][] map, int maxGens, int refreshRate) --> boolean[][] {}
+// [x] ClearCLI() {}
+// [x] Wait(int millis) {}
+// [x] PrintHeader() {}
+// [x] PrintMap(boolean[][] map, boolean brackets, boolean headers) {}
+// [x] PrintMessage(String message) {}
+// [ ] Bye() {}
+// [x] SaveMap(String filename, boolean[][] map) {}
+// [x] LoadMap(String filename) --> boolean[][] {}
+// [ ] Dir() - I need this method to print the contents of the folder to know what maps can be loaded.
 
-/// Crates I'll need:
-/// [ ] Command Line Argument Parser, to get map dimensions.
-/// [x] Filesystem functions, to Load and Save maps.
+// Crates I'll need:
+// [ ] Command Line Argument Parser, to get map dimensions.
+// [x] Filesystem functions, to Load and Save maps.
 
 type Vectrix = Vec<Vec<Cell>>;
+
 fn main() {
     clear_console();
     let mut message: String;
@@ -55,14 +56,21 @@ fn main() {
         let menu_opt = main_menu();
 
         match menu_opt {
-            MainMenuOpt::CreateKillCell => message = create_kill_cell(&mut map),
+            MainMenuOpt::CreateKillCell => {
+                message = create_kill_cell(&mut map)
+            },
             MainMenuOpt::Play => {
                 message = play(&mut map, &game_properties);
             },
-            MainMenuOpt::SaveMap => message = save_map("map.txt", &map),
-            MainMenuOpt::LoadMap => (map, message) = load_map("map.txt"),
+            MainMenuOpt::SaveMap => {
+                message = save_map("map.txt", &map)
+            },
+            MainMenuOpt::LoadMap => {
+                (map, message) = load_map("map.txt")
+            },
             MainMenuOpt::Configuration => {
                 message = String::from("Game Configuration");
+                // Menu loop
                 loop {
                     clear_console();
                     print_header();
@@ -190,40 +198,45 @@ impl Cell {
     }
 }
 
-fn get_usize(prompt: &String) -> usize {
-    use std::num::ParseIntError;
-
-    let mut result: Result<usize, ParseIntError>;
-
-    loop {
-        result = get_input(&prompt).trim().parse::<usize>();
-        match result {
-            Ok(_value) => break,
+fn get_usize(prompt: &String, abort_feature: bool) -> (usize, bool) {
+    const ABORTED: bool = true;
+    
+    let mut prompt_mod = prompt.clone();
+    if abort_feature {
+        prompt_mod.push_str("\nUse `q` to quit.");
+    }
+    
+    loop {    
+        let input_str = get_input(&prompt_mod);
+        let input_trim = input_str.trim();
+        
+        // Check result str first to match `q`. If yes, abort.
+        if input_trim == "q" {
+            return (0 as usize, ABORTED);
+        }
+    
+        match input_trim.parse::<usize>() {
+            Ok(value) => {
+                return (value, !ABORTED);
+            },
             Err(_error) => {
                 print_message(&String::from("[-] Bad input. Try again."), true);
             },
         }
     }
-    // usize value is guaranteed at this point
-    result.unwrap()
 }
 
 fn get_u32(prompt: &String) -> u32 {
-    use std::num::ParseIntError;
-
-    let mut result: Result<u32, ParseIntError>;
-
     loop {
-        result = get_input(&prompt).trim().parse::<u32>();
-        match result {
-            Ok(_value) => break,
+        match get_input(prompt).trim().parse::<u32>() {
+            Ok(value) => {
+                return value;
+            },
             Err(_error) => {
                 print_message(&String::from("[-] Bad input. Try again."), true);
             },
         }
     }
-    // u32 value is guaranteed at this point
-    result.unwrap()
 }
 
 fn get_input(prompt: &String) -> String {
@@ -231,19 +244,21 @@ fn get_input(prompt: &String) -> String {
     let mut input = String::new();
     print_message(&prompt, true);
     match io::stdin().read_line(&mut input) {
-        Ok(_) => (),
+        Ok(_bytes_read) => {
+            return input;
+        },
         Err(error) => {
             panic!("[-] Failed to read input. Error details: {error}")
         },
     };
-    input
 }
 
 fn new_map() -> (Vectrix, String) {
     print_message(&String::from("Generate your map."), true);
     
-    let rows: usize = get_usize(&String::from("Rows:"));
-    let cols: usize = get_usize(&String::from("Cols:"));
+    // No use for ABORTED
+    let (rows, _aborted) = get_usize(&String::from("Rows:"), false);
+    let (cols, _aborted) = get_usize(&String::from("Cols:"), false);
 
     if rows == 0 || cols == 0 {
         return (
@@ -333,35 +348,60 @@ fn print_map(map: &Vectrix, brackets: bool, headers: bool) {
 }
 
 fn create_kill_cell(map: &mut Vectrix) -> String {
-    clear_console();
-    print_header();
-    print_map(&map, true, true);
-    let mut message = String::from("Where?");
+    let mut message = String::from("Set/Reset Cells: ");
+    let message_loc = String::from("Location: ");
+    // Default is "not edited"
+    let mut edited: bool = false;
 
-    print_message(&message, true);
+    loop {
+        clear_console();
+        print_header();
+        print_map(&map, true, true);
+        print_message(&message, true);
+        print_message(&message_loc, true);
+        
+        let (row, aborted)  = get_usize(&String::from("Row:"), true);
+        if aborted {
+            break;
+        }
+        
+        let (col, aborted) = get_usize(&String::from("Col:"), true);
+        if aborted {
+            break;
+        }
 
-    let row: usize = get_usize(&String::from("Row: "));
-    let col: usize = get_usize(&String::from("Col: "));
-    
+        let row_len = map.len();
+        let col_len = map[0].len();
+        
+        let filtered_row = row % row_len;
+        let filtered_col = col % col_len;
+        
+        map[filtered_row][filtered_col] = map[filtered_row][filtered_col].not();
+        
+        match &map[filtered_row][filtered_col] {
+            Cell::Alive(ch) => { 
+                message = format!("[{ch} ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
+            },
+            Cell::Dead(ch) => { 
+                message = format!("[{ch} ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
+            },
+        };
 
-    let row_len = map.len();
-    let col_len = map[0].len();
-
-    let filtered_row = row % row_len;
-    let filtered_col = col % col_len;
-
-    map[filtered_row][filtered_col] = map[filtered_row][filtered_col].not();
-
-    match &map[filtered_row][filtered_col] {
-        Cell::Alive(ch) => { 
-            message = format!("[{ch} ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
+        // If we get here, then the map was edited
+        edited =  true;
+        
+    }
+    match edited {
+        true => {
+            message = String::from("Map edited successfully.");
+            return message;
         },
-        Cell::Dead(ch) => { 
-            message = format!("[{ch} ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
+        false => {
+            message = String::from("Aborted");
+            return message;
         },
-    };
+    }
     
-    return message;
 }
 
 fn set_generations() -> (u32, String) {

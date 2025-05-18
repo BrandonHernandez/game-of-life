@@ -7,7 +7,7 @@
 
 
 4/22/2025
-[ ] need to make CreateCell a loop so you can create many cells continuously until you exit.
+[x] need to make CreateCell a loop so you can create many cells continuously until you exit.
 [x] need to have the ability of aborting a game.
     -Done with crate crossterm
 [ ] add a "Edit Map in Notepad" configuration menu Option
