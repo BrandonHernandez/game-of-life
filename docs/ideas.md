@@ -13,3 +13,7 @@
 [ ] add a "Edit Map in Notepad" configuration menu Option
 [ ] again, it would be great to have a maps directory.
 [ ] print rules function
+
+5/19/2025
+[ ] still life detector
+[ ] still/dead universe detector
