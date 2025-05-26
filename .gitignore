@@ -16,3 +16,6 @@ target/
 # Ignore OS-generated files
 .DS_Store
 Thumbs.db
+
+# ignore maps
+map.txt
