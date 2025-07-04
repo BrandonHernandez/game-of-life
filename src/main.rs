@@ -56,8 +56,11 @@ fn main() {
         let menu_opt = main_menu();
 
         match menu_opt {
-            MainMenuOpt::CreateKillCell => {
-                message = Cell::create_kill(&mut map)
+            MainMenuOpt::SetResetCell => {
+                message = Cell::set_reset(&mut map)
+            },
+            MainMenuOpt::GeneratePattern => {
+                message = Cell::generate_pattern(&mut map, pattern_1(Coordinates { row: 0, col: 0, }))
             },
             MainMenuOpt::Play => {
                 message = play(&mut map, &game_properties);
@@ -103,7 +106,8 @@ fn main() {
 }
 
 enum MainMenuOpt {
-    CreateKillCell,
+    SetResetCell,
+    GeneratePattern,
     Play,
     SaveMap,
     LoadMap,
@@ -115,12 +119,13 @@ enum MainMenuOpt {
 
 fn main_menu() -> MainMenuOpt {
     let menu_text: String = format!(
-        "{} | {} | {} | {} | {} | {}\n", 
-        "1. Create/kill cell",
-        "2. Play", 
-        "3. Save map", 
-        "4. Load map", 
-        "5. Configuration", 
+        "{} | {} | {} | {} | {} | {} | {}\n", 
+        "1. Set/Reset cell",
+        "2. Generate pattern", 
+        "3. Play", 
+        "4. Save map", 
+        "5. Load map", 
+        "6. Configuration", 
         "99. Exit",
     );
     print_message(&menu_text, true);
@@ -128,11 +133,12 @@ fn main_menu() -> MainMenuOpt {
     let opt = get_u32(&String::from("Option: "));
     
     match opt {
-        1 => MainMenuOpt::CreateKillCell,
-        2 => MainMenuOpt::Play,
-        3 => MainMenuOpt::SaveMap,
-        4 => MainMenuOpt::LoadMap,
-        5 => MainMenuOpt::Configuration,
+        1 => MainMenuOpt::SetResetCell,
+        2 => MainMenuOpt::GeneratePattern,
+        3 => MainMenuOpt::Play,
+        4 => MainMenuOpt::SaveMap,
+        5 => MainMenuOpt::LoadMap,
+        6 => MainMenuOpt::Configuration,
         99 => MainMenuOpt::Exit,
         _ => MainMenuOpt::Unknown, 
     }
@@ -220,7 +226,7 @@ impl Cell {
             Cell::Dead(_) => Cell::alive(),
         }
     }
-    fn create_kill(map: &mut Vectrix) -> String {
+    fn set_reset(map: &mut Vectrix) -> String {
         let mut message = String::from("Set/Reset Cells");
         let message_loc = String::from("Enter Row and Column");
         // Default is "not edited"
@@ -272,6 +278,23 @@ impl Cell {
 
         return message;
     }
+
+    fn generate_pattern(map: &mut Vectrix, pattern: Vec<Coordinates>) -> String {
+        let message = String::from("[+] Pattern created successfully.");
+
+        for coordinate in pattern {
+            let row_len = map.len();
+            let col_len = map[0].len();
+
+            let filtered_row = coordinate.row % row_len;
+            let filtered_col = coordinate.col % col_len;
+
+            map[filtered_row][filtered_col] = Cell::alive();
+        }
+
+        message
+    }
+
 }
 
 fn get_usize(prompt: &String, abort_feature: bool) -> (usize, bool) {
@@ -779,6 +802,40 @@ fn set_infinite_game(prev_state: &bool) -> (bool, String) {
     };
     
     return (new_state, message)
+}
+
+struct Coordinates {
+    row: usize,
+    col: usize,
+}
+
+// Pattern generator in development
+fn pattern_1(location: Coordinates) -> Vec<Coordinates> {
+
+    let mut coordinates = Vec::<Coordinates>::new();    
+
+    coordinates.push(Coordinates {
+        row: location.row,
+        col: location.col,
+    });
+    coordinates.push(Coordinates {
+        row: location.row + 1,
+        col: location.col,
+    });
+    coordinates.push(Coordinates {
+        row: location.row + 1,
+        col: location.col + 2,
+    });
+    coordinates.push(Coordinates {
+        row: location.row + 2,
+        col: location.col,
+    });
+    coordinates.push(Coordinates {
+        row: location.row + 2,
+        col: location.col + 1,
+    });
+
+    coordinates
 }
 
 // fn print_rules() {
