@@ -57,7 +57,7 @@ fn main() {
 
         match menu_opt {
             MainMenuOpt::CreateKillCell => {
-                message = create_kill_cell(&mut map)
+                message = Cell::create_kill(&mut map)
             },
             MainMenuOpt::Play => {
                 message = play(&mut map, &game_properties);
@@ -145,6 +145,30 @@ struct GameConfig {
     map_size: (u32, u32),
 }
 
+// This function is under development
+impl GameConfig {
+    fn get_config() -> GameConfig {
+        use std::fs::read_to_string;
+
+        let filename = "config.ini";
+        let config = match read_to_string(filename) {
+            Ok(data) => data,
+            Err(_) => return GameConfig {
+                tick_rate: 75,
+                infinite_game: true,
+                max_generations: 9999,
+                map_size: (10, 10),
+            },
+        };
+        GameConfig {
+            tick_rate: 75,
+            infinite_game: true,
+            max_generations: 9999,
+            map_size: (10, 10),
+        }
+    }
+}
+
 enum ConfigMenuOpt {
     SetTickRate,
     InfiniteGame,
@@ -195,6 +219,58 @@ impl Cell {
             Cell::Alive(_) => Cell::dead(),
             Cell::Dead(_) => Cell::alive(),
         }
+    }
+    fn create_kill(map: &mut Vectrix) -> String {
+        let mut message = String::from("Set/Reset Cells");
+        let message_loc = String::from("Enter Row and Column");
+        // Default is "not edited"
+        let mut edited: bool = false;
+
+        loop {
+            clear_console();
+            print_header(vec!["Game of Life"]);
+            print_map(&map, true, true);
+            print_message(&message, true);
+            print_message(&message_loc, true);
+            
+            let (row, aborted)  = get_usize(&String::from("Row:"), true);
+            if aborted {
+                break;
+            }
+            
+            let (col, aborted) = get_usize(&String::from("Col:"), true);
+            if aborted {
+                break;
+            }
+
+            let row_len = map.len();
+            let col_len = map[0].len();
+            
+            let filtered_row = row % row_len;
+            let filtered_col = col % col_len;
+            
+            map[filtered_row][filtered_col] = map[filtered_row][filtered_col].not();
+            
+            match &map[filtered_row][filtered_col] {
+                Cell::Alive(ch) => { 
+                    message = format!("[{ch} ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
+                },
+                Cell::Dead(ch) => { 
+                    message = format!("[{ch} ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
+                },
+            };
+
+            // If we get here, then the map was edited
+            edited =  true;
+        }
+
+        if edited {
+            message = String::from("Map edited successfully.");
+        } else {
+            message = String::from("Aborted");
+        }
+
+        return message;
     }
 }
 
@@ -350,59 +426,6 @@ fn print_map(map: &Vectrix, brackets: bool, headers: bool) {
         }
         println!();
     }
-}
-
-fn create_kill_cell(map: &mut Vectrix) -> String {
-    let mut message = String::from("Set/Reset Cells");
-    let message_loc = String::from("Enter Row and Column");
-    // Default is "not edited"
-    let mut edited: bool = false;
-
-    loop {
-        clear_console();
-        print_header(vec!["Game of Life"]);
-        print_map(&map, true, true);
-        print_message(&message, true);
-        print_message(&message_loc, true);
-        
-        let (row, aborted)  = get_usize(&String::from("Row:"), true);
-        if aborted {
-            break;
-        }
-        
-        let (col, aborted) = get_usize(&String::from("Col:"), true);
-        if aborted {
-            break;
-        }
-
-        let row_len = map.len();
-        let col_len = map[0].len();
-        
-        let filtered_row = row % row_len;
-        let filtered_col = col % col_len;
-        
-        map[filtered_row][filtered_col] = map[filtered_row][filtered_col].not();
-        
-        match &map[filtered_row][filtered_col] {
-            Cell::Alive(ch) => { 
-                message = format!("[{ch} ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
-            },
-            Cell::Dead(ch) => { 
-                message = format!("[{ch} ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
-            },
-        };
-
-        // If we get here, then the map was edited
-        edited =  true;
-    }
-
-    if edited {
-        message = String::from("Map edited successfully.");
-    } else {
-        message = String::from("Aborted");
-    }
-
-    return message;
 }
 
 fn set_generations() -> (u32, String) {
