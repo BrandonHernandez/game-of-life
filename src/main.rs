@@ -809,32 +809,25 @@ struct Coordinates {
     col: usize,
 }
 
+impl Coordinates {
+    fn new(row: usize, col: usize) -> Coordinates {
+        Coordinates {
+            row,
+            col,
+        }
+    }
+}
+
 // Pattern generator in development
 fn pattern_1(location: Coordinates) -> Vec<Coordinates> {
-
     let mut coordinates = Vec::<Coordinates>::new();    
 
-    coordinates.push(Coordinates {
-        row: location.row,
-        col: location.col,
-    });
-    coordinates.push(Coordinates {
-        row: location.row + 1,
-        col: location.col,
-    });
-    coordinates.push(Coordinates {
-        row: location.row + 1,
-        col: location.col + 2,
-    });
-    coordinates.push(Coordinates {
-        row: location.row + 2,
-        col: location.col,
-    });
-    coordinates.push(Coordinates {
-        row: location.row + 2,
-        col: location.col + 1,
-    });
-
+    coordinates.push(Coordinates::new(location.row, location.col));
+    coordinates.push(Coordinates::new(location.row + 1, location.col));
+    coordinates.push(Coordinates::new(location.row + 1, location.col + 2));
+    coordinates.push(Coordinates::new(location.row + 2, location.col));
+    coordinates.push(Coordinates::new(location.row + 2, location.col + 1));
+    
     coordinates
 }
 
