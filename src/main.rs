@@ -759,7 +759,7 @@ enum Spaceship {
 
 impl Spaceship {
     fn glider(origin: Coordinates) -> Spaceship {
-        let mut coordinates = Vec::<Coordinates>::new();    
+        let mut points = Vec::<Coordinates>::new();    
 
         let cell_1 = Coordinates::new(origin.row, origin.col);
         let cell_2 = Coordinates::new(origin.row + 1, origin.col);
@@ -767,16 +767,16 @@ impl Spaceship {
         let cell_4 = Coordinates::new(origin.row + 2, origin.col);
         let cell_5 = Coordinates::new(origin.row + 2, origin.col + 1);
         
-        coordinates.push(cell_1);
-        coordinates.push(cell_2);
-        coordinates.push(cell_3);
-        coordinates.push(cell_4);
-        coordinates.push(cell_5);
+        points.push(cell_1);
+        points.push(cell_2);
+        points.push(cell_3);
+        points.push(cell_4);
+        points.push(cell_5);
         
-        Spaceship::Glider(coordinates)
+        Spaceship::Glider(points)
     }
     fn lightweight_spaceship(origin: Coordinates) -> Spaceship {
-        let mut coordinates = Vec::<Coordinates>::new();    
+        let mut points = Vec::<Coordinates>::new();    
 
         let cell_1 = Coordinates::new(origin.row, origin.col + 1);
         let cell_2 = Coordinates::new(origin.row, origin.col + 2);
@@ -787,16 +787,16 @@ impl Spaceship {
         let cell_7 = Coordinates::new(origin.row + 3, origin.col);
         let cell_8 = Coordinates::new(origin.row + 3, origin.col + 3);
         
-        coordinates.push(cell_1);
-        coordinates.push(cell_2);
-        coordinates.push(cell_3);
-        coordinates.push(cell_4);
-        coordinates.push(cell_5);
-        coordinates.push(cell_6);
-        coordinates.push(cell_7);
-        coordinates.push(cell_8);
+        points.push(cell_1);
+        points.push(cell_2);
+        points.push(cell_3);
+        points.push(cell_4);
+        points.push(cell_5);
+        points.push(cell_6);
+        points.push(cell_7);
+        points.push(cell_8);
         
-        Spaceship::LightweightSpaceship(coordinates)
+        Spaceship::LightweightSpaceship(points)
     }
 }
 
@@ -883,23 +883,23 @@ impl Map {
     fn generate_spaceship(map: &mut Vectrix, pattern: Spaceship) -> String {
         let message: String;
 
-        let coordinates = match pattern {
-            Spaceship::Glider(coordinates) => {
+        let points = match pattern {
+            Spaceship::Glider(points) => {
                 message = String::from("[+] Glider created.");
-                coordinates
+                points
             },
-            Spaceship::LightweightSpaceship(coordinates) => {
+            Spaceship::LightweightSpaceship(points) => {
                 message = String::from("[+] Lightweight Spaceship created.");
-                coordinates
+                points
             },
         };
 
-        for coordinate in coordinates {
+        for point in points {
             let row_len = map.len();
             let col_len = map[0].len();
 
-            let filtered_row = coordinate.row % row_len;
-            let filtered_col = coordinate.col % col_len;
+            let filtered_row = point.row % row_len;
+            let filtered_col = point.col % col_len;
 
             map[filtered_row][filtered_col] = Cell::alive();
         }
@@ -922,19 +922,6 @@ impl Map {
 
 // enum Guns {
 //     //
-// }
-
-// // Pattern generator in development
-// fn pattern_1(origin: Coordinates) -> Vec<Coordinates> {
-//     let mut coordinates = Vec::<Coordinates>::new();    
-
-//     coordinates.push(Coordinates::new(origin.row, origin.col));
-//     coordinates.push(Coordinates::new(origin.row + 1, origin.col));
-//     coordinates.push(Coordinates::new(origin.row + 1, origin.col + 2));
-//     coordinates.push(Coordinates::new(origin.row + 2, origin.col));
-//     coordinates.push(Coordinates::new(origin.row + 2, origin.col + 1));
-    
-//     coordinates
 // }
 
 // fn print_rules() {
