@@ -36,12 +36,12 @@ fn main() {
 
     // Create a map
     let mut map: Vectrix;
-    (map, message) = new_map();
+    (map, message) = Map::new();
     
     // Game config struct
     let mut game_properties = GameConfig {
         tick_rate: 250,
-        infinite_game: false,
+        infinite_game: true,
         max_generations: 50,
         map_size: (10, 10),
     };
@@ -57,10 +57,33 @@ fn main() {
 
         match menu_opt {
             MainMenuOpt::SetResetCell => {
-                message = Cell::set_reset(&mut map)
+                message = Map::set_reset_cell(&mut map)
             },
             MainMenuOpt::GeneratePattern => {
-                message = Cell::generate_pattern(&mut map, pattern_1(Coordinates { row: 0, col: 0, }))
+                
+                message = String::from("Generate pattern. Set origin.");
+                loop {
+                    clear_console();
+                    print_header(vec!["Fame of Light"]);
+                    print_map(&map, true, true);
+                    print_message(&message, true);
+
+                    let (col, aborted) = get_usize(&String::from("Col"), true);
+                    if aborted {
+                        break;
+                    }
+                    
+                    let (row, aborted) = get_usize(&String::from("Row"), true);
+                    if aborted {
+                        break;
+                    }
+
+                    let origin = Coordinates::new(col, row);
+                    let glider = Spaceship::glider(origin);
+                    message = Map::generate_spaceship(&mut map, glider);
+
+                }
+                message = String::from("[+] Pattern generation finished.");
             },
             MainMenuOpt::Play => {
                 message = play(&mut map, &game_properties);
@@ -72,7 +95,7 @@ fn main() {
                 (map, message) = load_map("map.txt")
             },
             MainMenuOpt::Configuration => {
-                message = String::from("Game Configuration");
+                message = String::from("Game configuration");
                 // Menu loop
                 loop {
                     clear_console();
@@ -92,7 +115,7 @@ fn main() {
                         ConfigMenuOpt::SetMaxGenerations => {
                             (game_properties.max_generations, message) = set_generations();
                         },
-                        ConfigMenuOpt::SetMapSize => (map, message) = new_map(),
+                        ConfigMenuOpt::SetMapSize => (map, message) = Map::new(),
                         ConfigMenuOpt::Exit => break,
                         ConfigMenuOpt::Unknown => (),
                     }
@@ -226,75 +249,6 @@ impl Cell {
             Cell::Dead(_) => Cell::alive(),
         }
     }
-    fn set_reset(map: &mut Vectrix) -> String {
-        let mut message = String::from("Set/Reset Cells");
-        let message_loc = String::from("Enter Row and Column");
-        // Default is "not edited"
-        let mut edited: bool = false;
-
-        loop {
-            clear_console();
-            print_header(vec!["Game of Life"]);
-            print_map(&map, true, true);
-            print_message(&message, true);
-            print_message(&message_loc, true);
-            
-            let (row, aborted)  = get_usize(&String::from("Row:"), true);
-            if aborted {
-                break;
-            }
-            
-            let (col, aborted) = get_usize(&String::from("Col:"), true);
-            if aborted {
-                break;
-            }
-
-            let row_len = map.len();
-            let col_len = map[0].len();
-            
-            let filtered_row = row % row_len;
-            let filtered_col = col % col_len;
-            
-            map[filtered_row][filtered_col] = map[filtered_row][filtered_col].not();
-            
-            match &map[filtered_row][filtered_col] {
-                Cell::Alive(ch) => { 
-                    message = format!("[{ch} ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
-                },
-                Cell::Dead(ch) => { 
-                    message = format!("[{ch} ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
-                },
-            };
-
-            // If we get here, then the map was edited
-            edited =  true;
-        }
-
-        if edited {
-            message = String::from("Map edited successfully.");
-        } else {
-            message = String::from("Aborted");
-        }
-
-        return message;
-    }
-
-    fn generate_pattern(map: &mut Vectrix, pattern: Vec<Coordinates>) -> String {
-        let message = String::from("[+] Pattern created successfully.");
-
-        for coordinate in pattern {
-            let row_len = map.len();
-            let col_len = map[0].len();
-
-            let filtered_row = coordinate.row % row_len;
-            let filtered_col = coordinate.col % col_len;
-
-            map[filtered_row][filtered_col] = Cell::alive();
-        }
-
-        message
-    }
-
 }
 
 fn get_usize(prompt: &String, abort_feature: bool) -> (usize, bool) {
@@ -350,26 +304,6 @@ fn get_input(prompt: &String) -> String {
             panic!("[-] Failed to read input. Error details: {error}")
         },
     };
-}
-
-fn new_map() -> (Vectrix, String) {
-    print_message(&String::from("Generate your map."), true);
-    
-    // No use for ABORTED
-    let (rows, _aborted) = get_usize(&String::from("Rows:"), false);
-    let (cols, _aborted) = get_usize(&String::from("Cols:"), false);
-
-    if rows == 0 || cols == 0 {
-        return (
-            vec![vec![Cell::dead(); 10]; 10], 
-            String::from(format!("[-] Invalid dimensions. 10 x 10 map created."))
-        );
-    }
-
-    (
-        vec![vec![Cell::dead(); cols]; rows], 
-        String::from(format!("[+] {rows} x {cols} map created."))
-    )
 }
 
 fn print_message(message: &String, new_line: bool) {
@@ -818,18 +752,190 @@ impl Coordinates {
     }
 }
 
-// Pattern generator in development
-fn pattern_1(location: Coordinates) -> Vec<Coordinates> {
-    let mut coordinates = Vec::<Coordinates>::new();    
-
-    coordinates.push(Coordinates::new(location.row, location.col));
-    coordinates.push(Coordinates::new(location.row + 1, location.col));
-    coordinates.push(Coordinates::new(location.row + 1, location.col + 2));
-    coordinates.push(Coordinates::new(location.row + 2, location.col));
-    coordinates.push(Coordinates::new(location.row + 2, location.col + 1));
-    
-    coordinates
+enum Spaceship {
+    LightweightSpaceship(Vec<Coordinates>),
+    Glider(Vec<Coordinates>),
 }
+
+impl Spaceship {
+    fn glider(origin: Coordinates) -> Spaceship {
+        let mut coordinates = Vec::<Coordinates>::new();    
+
+        let cell_1 = Coordinates::new(origin.row, origin.col);
+        let cell_2 = Coordinates::new(origin.row + 1, origin.col);
+        let cell_3 = Coordinates::new(origin.row + 1, origin.col + 2);
+        let cell_4 = Coordinates::new(origin.row + 2, origin.col);
+        let cell_5 = Coordinates::new(origin.row + 2, origin.col + 1);
+        
+        coordinates.push(cell_1);
+        coordinates.push(cell_2);
+        coordinates.push(cell_3);
+        coordinates.push(cell_4);
+        coordinates.push(cell_5);
+        
+        Spaceship::Glider(coordinates)
+    }
+    fn lightweight_spaceship(origin: Coordinates) -> Spaceship {
+        let mut coordinates = Vec::<Coordinates>::new();    
+
+        let cell_1 = Coordinates::new(origin.row, origin.col + 1);
+        let cell_2 = Coordinates::new(origin.row, origin.col + 2);
+        let cell_3 = Coordinates::new(origin.row, origin.col + 4);
+        let cell_4 = Coordinates::new(origin.row + 1, origin.col);
+        let cell_5 = Coordinates::new(origin.row + 1, origin.col + 4);
+        let cell_6 = Coordinates::new(origin.row + 2, origin.col + 4);
+        let cell_7 = Coordinates::new(origin.row + 3, origin.col);
+        let cell_8 = Coordinates::new(origin.row + 3, origin.col + 3);
+        
+        coordinates.push(cell_1);
+        coordinates.push(cell_2);
+        coordinates.push(cell_3);
+        coordinates.push(cell_4);
+        coordinates.push(cell_5);
+        coordinates.push(cell_6);
+        coordinates.push(cell_7);
+        coordinates.push(cell_8);
+        
+        Spaceship::LightweightSpaceship(coordinates)
+    }
+}
+
+struct Map;
+
+impl Map {
+    // fn new() -> Vectrix {
+
+    // }
+
+    fn new() -> (Vectrix, String) {
+        print_message(&String::from("Generate your map."), true);
+        
+        // No use for ABORTED
+        let (rows, _aborted) = get_usize(&String::from("Rows:"), false);
+        let (cols, _aborted) = get_usize(&String::from("Cols:"), false);
+
+        if rows == 0 || cols == 0 {
+            return (
+                vec![vec![Cell::dead(); 10]; 10], 
+                String::from(format!("[-] Invalid dimensions. 10 x 10 map created."))
+            );
+        }
+
+        (
+            vec![vec![Cell::dead(); cols]; rows], 
+            String::from(format!("[+] {rows} x {cols} map created."))
+        )
+    }
+
+    fn set_reset_cell(map: &mut Vectrix) -> String {
+        let mut message = String::from("Set/Reset Cells");
+        let message_loc = String::from("Enter Row and Column");
+        // Default is "not edited"
+        let mut edited: bool = false;
+
+        loop {
+            clear_console();
+            print_header(vec!["Game of Life"]);
+            print_map(&map, true, true);
+            print_message(&message, true);
+            print_message(&message_loc, true);
+            
+            let (row, aborted)  = get_usize(&String::from("Row:"), true);
+            if aborted {
+                break;
+            }
+            
+            let (col, aborted) = get_usize(&String::from("Col:"), true);
+            if aborted {
+                break;
+            }
+
+            let row_len = map.len();
+            let col_len = map[0].len();
+            
+            let filtered_row = row % row_len;
+            let filtered_col = col % col_len;
+            
+            map[filtered_row][filtered_col] = map[filtered_row][filtered_col].not();
+            
+            match &map[filtered_row][filtered_col] {
+                Cell::Alive(ch) => { 
+                    message = format!("[{ch} ] Alive cell at [{filtered_row:>2}][{filtered_row:>2}]");
+                },
+                Cell::Dead(ch) => { 
+                    message = format!("[{ch} ] Dead cell at [{filtered_row:>2}][{filtered_col:>2}]");
+                },
+            };
+
+            // If we get here, then the map was edited
+            edited =  true;
+        }
+
+        if edited {
+            message = String::from("Map edited successfully.");
+        } else {
+            message = String::from("Aborted");
+        }
+
+        return message;
+    }
+
+    fn generate_spaceship(map: &mut Vectrix, pattern: Spaceship) -> String {
+        let message: String;
+
+        let coordinates = match pattern {
+            Spaceship::Glider(coordinates) => {
+                message = String::from("[+] Glider created.");
+                coordinates
+            },
+            Spaceship::LightweightSpaceship(coordinates) => {
+                message = String::from("[+] Lightweight Spaceship created.");
+                coordinates
+            },
+        };
+
+        for coordinate in coordinates {
+            let row_len = map.len();
+            let col_len = map[0].len();
+
+            let filtered_row = coordinate.row % row_len;
+            let filtered_col = coordinate.col % col_len;
+
+            map[filtered_row][filtered_col] = Cell::alive();
+        }
+
+        message
+    }
+}
+
+// enum StillLifes {
+//     //
+// }
+
+// enum Oscillators {
+//     //
+// }
+
+// enum Methuselahs {
+//     //
+// }
+
+// enum Guns {
+//     //
+// }
+
+// // Pattern generator in development
+// fn pattern_1(origin: Coordinates) -> Vec<Coordinates> {
+//     let mut coordinates = Vec::<Coordinates>::new();    
+
+//     coordinates.push(Coordinates::new(origin.row, origin.col));
+//     coordinates.push(Coordinates::new(origin.row + 1, origin.col));
+//     coordinates.push(Coordinates::new(origin.row + 1, origin.col + 2));
+//     coordinates.push(Coordinates::new(origin.row + 2, origin.col));
+//     coordinates.push(Coordinates::new(origin.row + 2, origin.col + 1));
+    
+//     coordinates
+// }
 
 // fn print_rules() {
 

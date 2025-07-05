@@ -17,3 +17,12 @@
 5/19/2025
 [ ] still life detector
 [ ] still/dead universe detector
+
+
+7/4/2025
+[ ] Need to make a more robust map reader. It will crash if the map has blank rows, or if a cell is represented
+    by a character different from `x`.
+
+7/5/2025
+[ ] Add networking capabilities to play a session in more than one computer.
+    [ ] A computer can join or leave the session!
