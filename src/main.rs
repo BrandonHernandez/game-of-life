@@ -750,6 +750,10 @@ impl Coordinates {
             col,
         }
     }
+    // more variants 
+    // .
+    // .
+       
 }
 
 enum Spaceship {
@@ -797,6 +801,61 @@ impl Spaceship {
         points.push(cell_8);
         
         Spaceship::LightweightSpaceship(points)
+    }
+}
+
+enum StillLife {
+    FifteenBentPaperclip(Vec<Coordinates>),
+    // more variants 
+    // .
+    // .
+}
+
+impl StillLife {
+    fn fifteen_bent_paperclip(origin: Coordinates) -> StillLife {
+        let mut coordinates = Vec::<Coordinates>::new();
+
+        let cell_1 = Coordinates::new(origin.row, origin.col + 2);
+        let cell_2 = Coordinates::new(origin.row, origin.col + 3);
+        
+        let cell_3 = Coordinates::new(origin.row + 1, origin.col + 1);
+        let cell_4 = Coordinates::new(origin.row + 1, origin.col + 3);
+        let cell_5 = Coordinates::new(origin.row + 1, origin.col + 4);
+        let cell_6 = Coordinates::new(origin.row + 1, origin.col + 5);
+        
+        let cell_7 = Coordinates::new(origin.row + 2, origin.col);
+        let cell_8 = Coordinates::new(origin.row + 2, origin.col + 6);
+        
+        let cell_9 = Coordinates::new(origin.row + 3, origin.col + 1);
+        let cell_10 = Coordinates::new(origin.row + 3, origin.col + 2);
+        let cell_11 = Coordinates::new(origin.row + 3, origin.col + 3);
+        let cell_12 = Coordinates::new(origin.row + 3, origin.col + 4);
+        let cell_13 = Coordinates::new(origin.row + 3, origin.col + 6);
+
+        let cell_14 = Coordinates::new(origin.row + 4, origin.col + 3);
+        let cell_15 = Coordinates::new(origin.row + 4, origin.col + 5);
+
+        coordinates.push(cell_1);
+        coordinates.push(cell_2);
+
+        coordinates.push(cell_3);
+        coordinates.push(cell_4);
+        coordinates.push(cell_5);
+        coordinates.push(cell_6);
+        
+        coordinates.push(cell_7);
+        coordinates.push(cell_8);
+
+        coordinates.push(cell_9);
+        coordinates.push(cell_10);
+        coordinates.push(cell_11);
+        coordinates.push(cell_12);
+        coordinates.push(cell_13);
+
+        coordinates.push(cell_14);
+        coordinates.push(cell_15);
+
+        StillLife::FifteenBentPaperclip(coordinates);
     }
 }
 
