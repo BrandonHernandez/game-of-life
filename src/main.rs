@@ -68,19 +68,24 @@ fn main() {
                     print_map(&map, true, true);
                     print_message(&message, true);
 
-                    let (col, aborted) = get_usize(&String::from("Col"), true);
-                    if aborted {
-                        break;
-                    }
-                    
                     let (row, aborted) = get_usize(&String::from("Row"), true);
                     if aborted {
                         break;
                     }
+                    
+                    let (col, aborted) = get_usize(&String::from("Col"), true);
+                    if aborted {
+                        break;
+                    }
 
-                    let origin = Coordinates::new(col, row);
-                    let glider = Spaceship::glider(origin);
-                    message = Map::generate_spaceship(&mut map, glider);
+                    let origin = Coordinates::new(row, col);
+
+                    let glider = Spaceship::glider(origin.clone());
+
+                    let fifteen_bent_paperclip = StillLife::fifteen_bent_paperclip(origin);
+
+                    // message = Map::generate_spaceship(&mut map, glider);
+                    message = Map::generate_still_life(&mut map, fifteen_bent_paperclip);
 
                 }
                 message = String::from("[+] Pattern generation finished.");
@@ -738,6 +743,7 @@ fn set_infinite_game(prev_state: &bool) -> (bool, String) {
     return (new_state, message)
 }
 
+#[derive(Clone)]
 struct Coordinates {
     row: usize,
     col: usize,
@@ -855,7 +861,7 @@ impl StillLife {
         coordinates.push(cell_14);
         coordinates.push(cell_15);
 
-        StillLife::FifteenBentPaperclip(coordinates);
+        StillLife::FifteenBentPaperclip(coordinates)
     }
 }
 
@@ -949,6 +955,29 @@ impl Map {
             },
             Spaceship::LightweightSpaceship(points) => {
                 message = String::from("[+] Lightweight Spaceship created.");
+                points
+            },
+        };
+
+        for point in points {
+            let row_len = map.len();
+            let col_len = map[0].len();
+
+            let filtered_row = point.row % row_len;
+            let filtered_col = point.col % col_len;
+
+            map[filtered_row][filtered_col] = Cell::alive();
+        }
+
+        message
+    }
+
+    fn generate_still_life(map: &mut Vectrix, pattern: StillLife) -> String {
+        let message: String;
+
+        let points = match pattern {
+            StillLife::FifteenBentPaperclip(points) => {
+                message = String::from("[+] Fifteen Bent Paperclip created.");
                 points
             },
         };
