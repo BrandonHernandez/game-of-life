@@ -56,11 +56,11 @@ fn main() {
         let menu_opt = main_menu();
 
         match menu_opt {
-            MainMenuOpt::SetResetCell => {
-                message = Map::set_reset_cell(&mut map)
+            MainMenuOpt::SetClearCell => {
+                message = Map::set_clear_cell(&mut map)
             },
             MainMenuOpt::GeneratePattern => {
-                
+                // Option in development. Need to give ability of choosing pattern.
                 message = String::from("Generate pattern. Set origin.");
                 loop {
                     clear_console();
@@ -84,8 +84,13 @@ fn main() {
 
                     let fifteen_bent_paperclip = StillLife::fifteen_bent_paperclip(origin);
 
+                    let glider_points = Spaceship::get_points(glider);
+
+                    let fift_paperclip_points = StillLife::get_points(fifteen_bent_paperclip);
+
                     // message = Map::generate_spaceship(&mut map, glider);
-                    message = Map::generate_still_life(&mut map, fifteen_bent_paperclip);
+                    // message = Map::generate_still_life(&mut map, fifteen_bent_paperclip);
+                    message = Map::generate_pattern(&mut map, glider_points);
 
                 }
                 message = String::from("[+] Pattern generation finished.");
@@ -134,7 +139,7 @@ fn main() {
 }
 
 enum MainMenuOpt {
-    SetResetCell,
+    SetClearCell,
     GeneratePattern,
     Play,
     SaveMap,
@@ -148,7 +153,7 @@ enum MainMenuOpt {
 fn main_menu() -> MainMenuOpt {
     let menu_text: String = format!(
         "{} | {} | {} | {} | {} | {} | {}\n", 
-        "1. Set/Reset cell",
+        "1. Set/Clear cell",
         "2. Generate pattern", 
         "3. Play", 
         "4. Save map", 
@@ -161,7 +166,7 @@ fn main_menu() -> MainMenuOpt {
     let opt = get_u32(&String::from("Option: "));
     
     match opt {
-        1 => MainMenuOpt::SetResetCell,
+        1 => MainMenuOpt::SetClearCell,
         2 => MainMenuOpt::GeneratePattern,
         3 => MainMenuOpt::Play,
         4 => MainMenuOpt::SaveMap,
@@ -808,6 +813,17 @@ impl Spaceship {
         
         Spaceship::LightweightSpaceship(points)
     }
+
+    fn get_points(pattern: Spaceship) -> Vec<Coordinates> {
+        match pattern {
+            Spaceship::Glider(points) => {
+                points
+            },
+            Spaceship::LightweightSpaceship(points) => {
+                points
+            },
+        }
+    }
 }
 
 enum StillLife {
@@ -863,7 +879,18 @@ impl StillLife {
 
         StillLife::FifteenBentPaperclip(coordinates)
     }
+
+    fn get_points(pattern: StillLife) -> Vec<Coordinates> {
+        match pattern {
+            StillLife::FifteenBentPaperclip(points) => {
+                points
+            },
+            // extra variants,
+        }
+    }
 }
+
+
 
 struct Map;
 
@@ -892,8 +919,8 @@ impl Map {
         )
     }
 
-    fn set_reset_cell(map: &mut Vectrix) -> String {
-        let mut message = String::from("Set/Reset Cells");
+    fn set_clear_cell(map: &mut Vectrix) -> String {
+        let mut message = String::from("Set/Clear Cells");
         let message_loc = String::from("Enter Row and Column");
         // Default is "not edited"
         let mut edited: bool = false;
@@ -993,6 +1020,20 @@ impl Map {
         }
 
         message
+    }
+
+    fn generate_pattern(map: &mut Vectrix, points: Vec<Coordinates>) -> String {
+        for point in points {
+            let row_len = map.len();
+            let col_len = map[0].len();
+
+            let filtered_row = point.row % row_len;
+            let filtered_col = point.col % col_len;
+
+            map[filtered_row][filtered_col] = Cell::alive();
+        }
+
+        String::from("[+] Pattern generated.")
     }
 }
 
